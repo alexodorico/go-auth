@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 
 	_ "github.com/lib/pq"
 )
@@ -15,8 +16,14 @@ var (
 	dbname     = os.Getenv("DB_NAME")
 )
 
+type User struct {
+	id       int
+	username string
+	password string
+}
+
 func main() {
-	http.HandleFunc("/api/user", handleUser)
+	http.HandleFunc("/api/user/", handleUser)
 	err := http.ListenAndServe(":9000", nil)
 	checkErr(err)
 }
@@ -40,8 +47,9 @@ func handleUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func getUser(w http.ResponseWriter, r *http.Request, db *sql.DB) {
-	fmt.Printf("GET on /api/user")
-	rows, err := db.Query("SELECT id, username, password FROM users")
+	params := strings.Split(r.URL.Path, "/")
+	uid := params[3]
+	rows, err := db.Query("SELECT id, username, password FROM users WHERE id = $1", uid)
 	checkErr(err)
 
 	for rows.Next() {
@@ -50,7 +58,7 @@ func getUser(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		var password string
 		err = rows.Scan(&id, &username, &password)
 		checkErr(err)
-		fmt.Printf("%3v | %s | %s ", id, username, password)
+		fmt.Printf("%v | %v | %v", id, username, password)
 	}
 }
 
