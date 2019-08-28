@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"net/http"
 	"os"
 
 	_ "github.com/lib/pq"
@@ -15,6 +16,12 @@ var (
 )
 
 func main() {
+	http.HandleFunc("/api/user", handleUser)
+	err := http.ListenAndServe(":9000", nil)
+	checkErr(err)
+}
+
+func handleUser(w http.ResponseWriter, r *http.Request) {
 	dbinfo := fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable",
 		dbuser, dbpassword, dbname)
 	db, err := sql.Open("postgres", dbinfo)
