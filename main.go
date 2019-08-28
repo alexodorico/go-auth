@@ -62,6 +62,7 @@ func getUser(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 
 	j, err := json.Marshal(u)
 	checkErr(err)
+
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(j)
 }
@@ -69,11 +70,14 @@ func getUser(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 func postUser(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	var sStmt = "INSERT INTO users(username,password) VALUES($1,$2)"
 	var u user
+
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&u)
 	checkErr(err)
+
 	stmt, err := db.Prepare(sStmt)
 	checkErr(err)
+
 	_, err = stmt.Exec(u.Username, u.Password)
 	stmt.Close()
 	checkErr(err)
