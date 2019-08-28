@@ -18,7 +18,6 @@ var (
 )
 
 type user struct {
-	UID      int    `json:"uid"`
 	Username string `json:"username"`
 	Password string `json:"password"`
 }
@@ -33,6 +32,8 @@ func handleUser(w http.ResponseWriter, r *http.Request) {
 	dbinfo := fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable",
 		dbuser, dbpassword, dbname)
 	db, err := sql.Open("postgres", dbinfo)
+	checkErr(err)
+	defer db.Close()
 
 	switch r.Method {
 	case "GET":
@@ -42,40 +43,40 @@ func handleUser(w http.ResponseWriter, r *http.Request) {
 	default:
 		fmt.Printf("Only GET and POST methods are allowed on this endpoint")
 	}
-
-	checkErr(err)
-	defer db.Close()
 }
 
 func getUser(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	var u user
 	params := strings.Split(r.URL.Path, "/")
 	uid := params[3]
-	rows, err := db.Query("SELECT id, username, password FROM users WHERE id = $1", uid)
+	rows, err := db.Query("SELECT username, password FROM users WHERE id = $1", uid)
 	checkErr(err)
 
 	for rows.Next() {
-		var id int
 		var uname string
 		var pw string
-		err = rows.Scan(&id, &uname, &pw)
-		u = user{UID: id, Username: uname, Password: pw}
+		err = rows.Scan(&uname, &pw)
+		u = user{Username: uname, Password: pw}
 		checkErr(err)
 	}
 
 	j, err := json.Marshal(u)
 	checkErr(err)
-	fmt.Println(string(j))
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(j)
 }
 
 func postUser(w http.ResponseWriter, r *http.Request, db *sql.DB) {
-	fmt.Printf("POST on /api/user")
-	var lastInsertID int
-	err := db.QueryRow("INSERT INTO users(username,password) VALUES($1,$2) RETURNING id", "oxideorcoal", "wow").Scan(&lastInsertID)
+	var sStmt = "INSERT INTO users(username,password) VALUES($1,$2)"
+	var u user
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(&u)
 	checkErr(err)
-	fmt.Println("last inserted ID =", lastInsertID)
+	stmt, err := db.Prepare(sStmt)
+	checkErr(err)
+	_, err = stmt.Exec(u.Username, u.Password)
+	stmt.Close()
+	checkErr(err)
 }
 
 func checkErr(err error) {
