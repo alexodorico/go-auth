@@ -1,9 +1,9 @@
 package main
 
 import (
-	"database/sql"
 	"encoding/json"
 	"fmt"
+	"goserver/models"
 	"net/http"
 	"os"
 
@@ -28,6 +28,10 @@ type response struct {
 }
 
 func main() {
+	dbinfo := fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable",
+		dbuser, dbpassword, dbname)
+	models.InitDB(dbinfo)
+
 	http.HandleFunc("/login", handleLogin)
 	http.HandleFunc("/register", handleRegister)
 	err := http.ListenAndServe(":9000", nil)
@@ -39,21 +43,15 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleRegister(w http.ResponseWriter, r *http.Request) {
-	dbinfo := fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable",
-		dbuser, dbpassword, dbname)
-	db, err := sql.Open("postgres", dbinfo)
-	checkErr(err)
-	defer db.Close()
-
 	var sStmt = "INSERT INTO users(username,password,email) VALUES($1,$2,$3)"
 	var u user
 	var res response
 
 	decoder := json.NewDecoder(r.Body)
-	err = decoder.Decode(&u)
+	err := decoder.Decode(&u)
 	checkErr(err)
 
-	stmt, err := db.Prepare(sStmt)
+	stmt, err := models.DB.Prepare(sStmt)
 	checkErr(err)
 
 	_, err = stmt.Exec(u.Username, u.Password, u.Email)
@@ -65,7 +63,6 @@ func handleRegister(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(j)
-	stmt.Close()
 }
 
 // func getUser(w http.ResponseWriter, r *http.Request, db *sql.DB) {
