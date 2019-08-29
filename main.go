@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -20,9 +21,8 @@ var (
 )
 
 type user struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
 	Email    string `json:"email"`
+	Password string `json:"password"`
 }
 
 // registration response
@@ -44,11 +44,24 @@ func main() {
 }
 
 func handleLogin(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("hello")
+	var u user
+	var id int
+
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(&u)
+	checkErr(err)
+
+	err = models.DB.QueryRow("SELECT id FROM users WHERE email = $1", u.Email).Scan(&id)
+
+	if err != sql.ErrNoRows {
+		fmt.Println("user found")
+	} else {
+		fmt.Println("no user found")
+	}
 }
 
 func handleRegister(w http.ResponseWriter, r *http.Request) {
-	var sStmt = "INSERT INTO users(username,password,email) VALUES($1,$2,$3) RETURNING id"
+	var sStmt = "INSERT INTO users(password,email) VALUES($1,$2) RETURNING id"
 	var u user
 	var res regRes
 	var userID int
@@ -60,7 +73,7 @@ func handleRegister(w http.ResponseWriter, r *http.Request) {
 	stmt, err := models.DB.Prepare(sStmt)
 	checkErr(err)
 
-	err = stmt.QueryRow(u.Username, u.Password, u.Email).Scan(&userID)
+	err = stmt.QueryRow(u.Password, u.Email).Scan(&userID)
 	checkErr(err)
 
 	token := createToken(userID)
