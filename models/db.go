@@ -2,7 +2,6 @@ package models
 
 import (
 	"database/sql"
-	"fmt"
 	"log"
 
 	// For postgres connection
@@ -16,6 +15,7 @@ var DB *sql.DB
 func InitDB(dataSourceName string) {
 	var err error
 	DB, err = sql.Open("postgres", dataSourceName)
+
 	if err != nil {
 		log.Panic(err)
 	}
@@ -23,5 +23,4 @@ func InitDB(dataSourceName string) {
 	if err = DB.Ping(); err != nil {
 		log.Panic(err)
 	}
-	fmt.Println("db")
 }
