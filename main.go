@@ -3,9 +3,12 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"goserver/models"
 	"net/http"
 	"os"
+
+	"github.com/dgrijalva/jwt-go"
+
+	"github.com/alexodorico/goserver/models"
 
 	_ "github.com/lib/pq"
 )
@@ -22,9 +25,11 @@ type user struct {
 	Email    string `json:"email"`
 }
 
-type response struct {
+// registration response
+type regRes struct {
 	Message string `json:"message"`
 	Success bool   `json:"success"`
+	Token   string `json:"token"`
 }
 
 func main() {
@@ -43,9 +48,10 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleRegister(w http.ResponseWriter, r *http.Request) {
-	var sStmt = "INSERT INTO users(username,password,email) VALUES($1,$2,$3)"
+	var sStmt = "INSERT INTO users(username,password,email) VALUES($1,$2,$3) RETURNING id"
 	var u user
-	var res response
+	var res regRes
+	var userID int
 
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&u)
@@ -54,15 +60,27 @@ func handleRegister(w http.ResponseWriter, r *http.Request) {
 	stmt, err := models.DB.Prepare(sStmt)
 	checkErr(err)
 
-	_, err = stmt.Exec(u.Username, u.Password, u.Email)
+	err = stmt.QueryRow(u.Username, u.Password, u.Email).Scan(&userID)
 	checkErr(err)
 
-	res = response{Message: "successful registration", Success: true}
+	token := createToken(userID)
+
+	res = regRes{Message: "successful registration", Success: true, Token: token}
 	j, err := json.Marshal(res)
 	checkErr(err)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(j)
+}
+
+func createToken(userID int) string {
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"id": userID,
+	})
+	tokenString, err := token.SignedString([]byte("secret"))
+	checkErr(err)
+
+	return tokenString
 }
 
 // func getUser(w http.ResponseWriter, r *http.Request, db *sql.DB) {
