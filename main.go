@@ -65,6 +65,13 @@ func handleRegister(w http.ResponseWriter, r *http.Request) {
 	err := decoder.Decode(&u)
 	checkErr(err)
 
+	exists := checkIfUserExists(u.Email)
+
+	if exists {
+		sendJSON(w, response{Message: "User already exists", Success: false, Token: ""}) 
+		return
+	}
+
 	stmt, err := models.DB.Prepare(sStmt)
 	checkErr(err)
 
@@ -76,13 +83,6 @@ func handleRegister(w http.ResponseWriter, r *http.Request) {
 	token := createToken(userID)
 
 	sendJSON(w, response{Message: "successful registration", Success: true, Token: token})
-
-	// res = response{Message: "successful registration", Success: true, Token: token}
-	// j, err := json.Marshal(res)
-	// checkErr(err)
-
-	// w.Header().Set("Content-Type", "application/json")
-	// w.Write(j)
 }
 
 func sendJSON(w http.ResponseWriter, res response) {
