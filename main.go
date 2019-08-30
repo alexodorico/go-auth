@@ -49,7 +49,6 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 	err := decoder.Decode(&u)
 	checkErr(err)
 	exists := checkIfUserExists(u.Email)
-
 	if exists {
 		fmt.Println("exists")
 	}
@@ -72,11 +71,9 @@ func handleRegister(w http.ResponseWriter, r *http.Request) {
 
 	stmt, err := models.DB.Prepare(sStmt)
 	checkErr(err)
-
 	hash := hashAndSalt(u.Password)
 	err = stmt.QueryRow(hash, u.Email).Scan(&userID)
 	checkErr(err)
-
 	token := createToken(userID)
 	sendJSON(w, response{Message: "successful registration", Success: true, Token: token})
 }
@@ -103,18 +100,12 @@ func checkIfUserExists(email string) bool {
 	return false
 }
 
-// func comparePasswords(hashed string, plain []byte) bool {
-
-// }
-
 func createToken(userID int) string {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"id": userID,
 	})
-
 	tokenString, err := token.SignedString([]byte("secret"))
 	checkErr(err)
-
 	return tokenString
 }
 
