@@ -7,9 +7,9 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/alexodorico/goserver/models"
 	"github.com/dgrijalva/jwt-go"
 	"golang.org/x/crypto/bcrypt"
-	"github.com/alexodorico/goserver/models"
 
 	_ "github.com/lib/pq"
 )
@@ -48,7 +48,6 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&u)
 	checkErr(err)
-
 	exists := checkIfUserExists(u.Email)
 
 	if exists {
@@ -66,9 +65,8 @@ func handleRegister(w http.ResponseWriter, r *http.Request) {
 	checkErr(err)
 
 	exists := checkIfUserExists(u.Email)
-
 	if exists {
-		sendJSON(w, response{Message: "User already exists", Success: false, Token: ""}) 
+		sendJSON(w, response{Message: "User already exists", Success: false, Token: ""})
 		return
 	}
 
@@ -76,12 +74,10 @@ func handleRegister(w http.ResponseWriter, r *http.Request) {
 	checkErr(err)
 
 	hash := hashAndSalt(u.Password)
-
 	err = stmt.QueryRow(hash, u.Email).Scan(&userID)
 	checkErr(err)
 
 	token := createToken(userID)
-
 	sendJSON(w, response{Message: "successful registration", Success: true, Token: token})
 }
 
@@ -101,7 +97,6 @@ func hashAndSalt(password string) string {
 
 func checkIfUserExists(email string) bool {
 	err := models.DB.QueryRow("SELECT id FROM users WHERE email = $1", email).Scan()
-
 	if err != sql.ErrNoRows {
 		return true
 	}
