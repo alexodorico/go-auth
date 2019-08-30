@@ -44,18 +44,15 @@ func main() {
 
 func handleLogin(w http.ResponseWriter, r *http.Request) {
 	var u user
-	var id int
 
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&u)
 	checkErr(err)
 
-	err = models.DB.QueryRow("SELECT id FROM users WHERE email = $1", u.Email).Scan(&id)
+	exists := checkIfUserExists(u.Email)
 
-	if err != sql.ErrNoRows {
-		fmt.Println("user found")
-	} else {
-		fmt.Println("no user found")
+	if exists {
+		fmt.Println("exists")
 	}
 }
 
@@ -94,6 +91,19 @@ func hashAndSalt(password string) string {
 	return string(hash)
 }
 
+func checkIfUserExists(email string) bool {
+	err := models.DB.QueryRow("SELECT id FROM users WHERE email = $1", email).Scan()
+
+	if err != sql.ErrNoRows {
+		return true
+	}
+	return false
+}
+
+// func comparePasswords(hashed string, plain []byte) bool {
+
+// }
+
 func createToken(userID int) string {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"id": userID,
@@ -103,6 +113,12 @@ func createToken(userID int) string {
 	checkErr(err)
 
 	return tokenString
+}
+
+func checkErr(err error) {
+	if err != nil {
+		panic(err)
+	}
 }
 
 // func getUser(w http.ResponseWriter, r *http.Request, db *sql.DB) {
@@ -126,9 +142,3 @@ func createToken(userID int) string {
 // 	w.Header().Set("Content-Type", "application/json")
 // 	w.Write(j)
 // }
-
-func checkErr(err error) {
-	if err != nil {
-		panic(err)
-	}
-}
