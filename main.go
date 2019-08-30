@@ -8,7 +8,7 @@ import (
 	"os"
 
 	"github.com/dgrijalva/jwt-go"
-
+	"golang.org/x/crypto/bcrypt"
 	"github.com/alexodorico/goserver/models"
 
 	_ "github.com/lib/pq"
@@ -25,8 +25,7 @@ type user struct {
 	Password string `json:"password"`
 }
 
-// registration response
-type regRes struct {
+type response struct {
 	Message string `json:"message"`
 	Success bool   `json:"success"`
 	Token   string `json:"token"`
@@ -63,7 +62,7 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 func handleRegister(w http.ResponseWriter, r *http.Request) {
 	var sStmt = "INSERT INTO users(password,email) VALUES($1,$2) RETURNING id"
 	var u user
-	var res regRes
+	var res response
 	var userID int
 
 	decoder := json.NewDecoder(r.Body)
@@ -73,12 +72,14 @@ func handleRegister(w http.ResponseWriter, r *http.Request) {
 	stmt, err := models.DB.Prepare(sStmt)
 	checkErr(err)
 
-	err = stmt.QueryRow(u.Password, u.Email).Scan(&userID)
+	hash := hashAndSalt(u.Password)
+
+	err = stmt.QueryRow(hash, u.Email).Scan(&userID)
 	checkErr(err)
 
 	token := createToken(userID)
 
-	res = regRes{Message: "successful registration", Success: true, Token: token}
+	res = response{Message: "successful registration", Success: true, Token: token}
 	j, err := json.Marshal(res)
 	checkErr(err)
 
@@ -86,10 +87,18 @@ func handleRegister(w http.ResponseWriter, r *http.Request) {
 	w.Write(j)
 }
 
+func hashAndSalt(password string) string {
+	pwd := []byte(password)
+	hash, err := bcrypt.GenerateFromPassword(pwd, bcrypt.MinCost)
+	checkErr(err)
+	return string(hash)
+}
+
 func createToken(userID int) string {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"id": userID,
 	})
+
 	tokenString, err := token.SignedString([]byte("secret"))
 	checkErr(err)
 
