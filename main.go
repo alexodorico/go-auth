@@ -1,15 +1,13 @@
 package main
 
 import (
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
 
 	"github.com/alexodorico/goserver/models"
-	"github.com/dgrijalva/jwt-go"
-	"golang.org/x/crypto/bcrypt"
+	"github.com/alexodorico/goserver/utils"
 
 	_ "github.com/lib/pq"
 )
@@ -39,9 +37,14 @@ func main() {
 	http.HandleFunc("/login", handleLogin)
 	http.HandleFunc("/register", handleRegister)
 	err := http.ListenAndServe(":9000", nil)
-	checkErr(err)
+	utils.CheckErr(err)
 }
 
+// handleLogin decodes JSON sent in the body,
+// then checks by email to see if the user exists.
+// If the email exists, it compares the given password to the 
+// hashed password stored in the database.
+// If the passwords match, a token containing the users id is sent in the response
 func handleLogin(w http.ResponseWriter, r *http.Request) {
 	var u user
 	var hashpw string
@@ -49,24 +52,27 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&u)
-	checkErr(err)
-	exists := checkIfUserExists(u.Email)
+	utils.CheckErr(err)
+	exists := utils.CheckUserExists(u.Email)
 	if !exists {
 		sendJSON(w, response{Message: "Incorrect email or password", Success: false, Token: ""})
 		return
 	}
 
 	err = models.DB.QueryRow("SELECT id, password FROM users WHERE email = $1", u.Email).Scan(&uid, &hashpw)
-	valid := comparePasswords(hashpw, u.Password)
+	valid := utils.ComparePasswords(hashpw, u.Password)
 	if !valid {
 		sendJSON(w, response{Message: "Incorrect email or password", Success: false, Token: ""})
 		return
 	}
-	token := createToken(uid)
+	token := utils.CreateToken(uid)
 	sendJSON(w, response{Message: "Login successful", Success: true, Token: token})
 	return
 }
 
+// handleRegister check to see if a user already exists in the database.
+// If they don't, inserts hashed password and email into users table
+// and sends a JWT containing the user's id in the response
 func handleRegister(w http.ResponseWriter, r *http.Request) {
 	var sStmt = "INSERT INTO users(password,email) VALUES($1,$2) RETURNING id"
 	var u user
@@ -74,66 +80,27 @@ func handleRegister(w http.ResponseWriter, r *http.Request) {
 
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&u)
-	checkErr(err)
+	utils.CheckErr(err)
 
-	exists := checkIfUserExists(u.Email)
+	exists := utils.CheckUserExists(u.Email)
 	if exists {
 		sendJSON(w, response{Message: "User already exists", Success: false, Token: ""})
 		return
 	}
 
 	stmt, err := models.DB.Prepare(sStmt)
-	checkErr(err)
-	hash := hashAndSalt(u.Password)
+	utils.CheckErr(err)
+	hash := utils.HashAndSalt(u.Password)
 	err = stmt.QueryRow(hash, u.Email).Scan(&userID)
-	checkErr(err)
-	token := createToken(userID)
+	utils.CheckErr(err)
+	token := utils.CreateToken(userID)
 	sendJSON(w, response{Message: "Registration successful", Success: true, Token: token})
 }
 
+// sendJSON sends a JSON response to client 
 func sendJSON(w http.ResponseWriter, res response) {
 	j, err := json.Marshal(res)
-	checkErr(err)
+	utils.CheckErr(err)
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(j)
-}
-
-func hashAndSalt(password string) string {
-	pwd := []byte(password)
-	hash, err := bcrypt.GenerateFromPassword(pwd, bcrypt.MinCost)
-	checkErr(err)
-	return string(hash)
-}
-
-func comparePasswords(hashed string, plain string) bool {
-	hashedByte := []byte(hashed)
-	plainByte := []byte(plain)
-	err := bcrypt.CompareHashAndPassword(hashedByte, plainByte)
-	if err != nil {
-		return false
-	}
-	return true
-}
-
-func checkIfUserExists(email string) bool {
-	err := models.DB.QueryRow("SELECT id FROM users WHERE email = $1", email).Scan()
-	if err != sql.ErrNoRows {
-		return true
-	}
-	return false
-}
-
-func createToken(userID int) string {
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"id": userID,
-	})
-	tokenString, err := token.SignedString([]byte("secret"))
-	checkErr(err)
-	return tokenString
-}
-
-func checkErr(err error) {
-	if err != nil {
-		panic(err)
-	}
 }
