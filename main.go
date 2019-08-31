@@ -62,7 +62,6 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 		sendJSON(w, response{Message: "Incorrect email or password", Success: false, Token: ""})
 		return
 	}
-	
 	token := createToken(uid)
 	sendJSON(w, response{Message: "Login successful", Success: true, Token: token})
 	return
@@ -138,25 +137,3 @@ func checkErr(err error) {
 		panic(err)
 	}
 }
-
-// func getUser(w http.ResponseWriter, r *http.Request, db *sql.DB) {
-// 	var u user
-// 	params := strings.Split(r.URL.Path, "/")
-// 	uid := params[3]
-// 	rows, err := db.Query("SELECT username, password FROM users WHERE id = $1", uid)
-// 	checkErr(err)
-
-// 	for rows.Next() {
-// 		var uname string
-// 		var pw string
-// 		err = rows.Scan(&uname, &pw)
-// 		u = user{Username: uname, Password: pw}
-// 		checkErr(err)
-// 	}
-
-// 	j, err := json.Marshal(u)
-// 	checkErr(err)
-
-// 	w.Header().Set("Content-Type", "application/json")
-// 	w.Write(j)
-// }
