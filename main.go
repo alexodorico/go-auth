@@ -44,14 +44,28 @@ func main() {
 
 func handleLogin(w http.ResponseWriter, r *http.Request) {
 	var u user
+	var hashpw string
+	var uid int
 
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&u)
 	checkErr(err)
 	exists := checkIfUserExists(u.Email)
-	if exists {
-		fmt.Println("exists")
+	if !exists {
+		sendJSON(w, response{Message: "Incorrect email or password", Success: false, Token: ""})
+		return
 	}
+
+	err = models.DB.QueryRow("SELECT id, password FROM users WHERE email = $1", u.Email).Scan(&uid, &hashpw)
+	valid := comparePasswords(hashpw, u.Password)
+	if !valid {
+		sendJSON(w, response{Message: "Incorrect email or password", Success: false, Token: ""})
+		return
+	}
+	
+	token := createToken(uid)
+	sendJSON(w, response{Message: "Login successful", Success: true, Token: token})
+	return
 }
 
 func handleRegister(w http.ResponseWriter, r *http.Request) {
@@ -75,7 +89,7 @@ func handleRegister(w http.ResponseWriter, r *http.Request) {
 	err = stmt.QueryRow(hash, u.Email).Scan(&userID)
 	checkErr(err)
 	token := createToken(userID)
-	sendJSON(w, response{Message: "successful registration", Success: true, Token: token})
+	sendJSON(w, response{Message: "Registration successful", Success: true, Token: token})
 }
 
 func sendJSON(w http.ResponseWriter, res response) {
@@ -90,6 +104,16 @@ func hashAndSalt(password string) string {
 	hash, err := bcrypt.GenerateFromPassword(pwd, bcrypt.MinCost)
 	checkErr(err)
 	return string(hash)
+}
+
+func comparePasswords(hashed string, plain string) bool {
+	hashedByte := []byte(hashed)
+	plainByte := []byte(plain)
+	err := bcrypt.CompareHashAndPassword(hashedByte, plainByte)
+	if err != nil {
+		return false
+	}
+	return true
 }
 
 func checkIfUserExists(email string) bool {
