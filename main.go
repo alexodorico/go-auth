@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/alexodorico/goserver/models"
 	"github.com/alexodorico/goserver/utils"
@@ -36,13 +37,43 @@ func main() {
 
 	http.HandleFunc("/login", handleLogin)
 	http.HandleFunc("/register", handleRegister)
+	http.HandleFunc("/protected", verifyAuth(http.HandlerFunc(handleProtected)))
 	err := http.ListenAndServe(":9000", nil)
 	utils.CheckErr(err)
 }
 
+func verifyAuth(h http.Handler) http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		header := r.Header["Authorization"][0]
+		split := strings.Split(header, " ")
+		if len(split) != 2 {
+			return
+		}
+
+		token := split[1]
+		if token == "" {
+			return
+		}
+
+		id := utils.GetID(token)
+		fmt.Println(id)
+		exists := utils.CheckID(id)
+		if !exists {
+			return
+		}
+
+		fmt.Println("Auth middleware")
+		h.ServeHTTP(w, r)
+	})
+}
+
+func handleProtected(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("Made it to protected route")
+}
+
 // handleLogin decodes JSON sent in the body,
 // then checks by email to see if the user exists.
-// If the email exists, it compares the given password to the 
+// If the email exists, it compares the given password to the
 // hashed password stored in the database.
 // If the passwords match, a token containing the users id is sent in the response
 func handleLogin(w http.ResponseWriter, r *http.Request) {
@@ -53,7 +84,7 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&u)
 	utils.CheckErr(err)
-	exists := utils.CheckUserExists(u.Email)
+	exists := utils.CheckEmail(u.Email)
 	if !exists {
 		sendJSON(w, response{Message: "Incorrect email or password", Success: false, Token: ""})
 		return
@@ -82,7 +113,7 @@ func handleRegister(w http.ResponseWriter, r *http.Request) {
 	err := decoder.Decode(&u)
 	utils.CheckErr(err)
 
-	exists := utils.CheckUserExists(u.Email)
+	exists := utils.CheckEmail(u.Email)
 	if exists {
 		sendJSON(w, response{Message: "User already exists", Success: false, Token: ""})
 		return
@@ -97,7 +128,7 @@ func handleRegister(w http.ResponseWriter, r *http.Request) {
 	sendJSON(w, response{Message: "Registration successful", Success: true, Token: token})
 }
 
-// sendJSON sends a JSON response to client 
+// sendJSON sends a JSON response to client
 func sendJSON(w http.ResponseWriter, res response) {
 	j, err := json.Marshal(res)
 	utils.CheckErr(err)
