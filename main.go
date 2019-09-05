@@ -7,16 +7,11 @@ import (
 	"os"
 	"strings"
 
+	"github.com/joho/godotenv"
 	"github.com/alexodorico/goserver/models"
 	"github.com/alexodorico/goserver/utils"
 
 	_ "github.com/lib/pq"
-)
-
-var (
-	dbuser     = os.Getenv("DB_USER")
-	dbpassword = os.Getenv("DB_PASSWORD")
-	dbname     = os.Getenv("DB_NAME")
 )
 
 type user struct {
@@ -31,6 +26,13 @@ type response struct {
 }
 
 func main() {
+	err := godotenv.Load()
+	utils.CheckErr(err)
+
+	dbuser     := os.Getenv("DB_USER")
+	dbpassword := os.Getenv("DB_PASSWORD")
+	dbname     := os.Getenv("DB_NAME")
+	
 	dbinfo := fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable",
 		dbuser, dbpassword, dbname)
 	models.InitDB(dbinfo)
@@ -38,7 +40,7 @@ func main() {
 	http.HandleFunc("/login", handleLogin)
 	http.HandleFunc("/register", handleRegister)
 	http.HandleFunc("/protected", verifyAuth(http.HandlerFunc(handleProtected)))
-	err := http.ListenAndServe(":9000", nil)
+	err = http.ListenAndServe(":9000", nil)
 	utils.CheckErr(err)
 }
 
@@ -47,28 +49,30 @@ func verifyAuth(h http.Handler) http.HandlerFunc {
 		header := r.Header["Authorization"][0]
 		split := strings.Split(header, " ")
 		if len(split) != 2 {
+			sendJSON(w, response{Message: "Access denied", Success: false, Token: ""})
 			return
 		}
-
 		token := split[1]
 		if token == "" {
+			sendJSON(w, response{Message: "Access denied", Success: false, Token: ""})
 			return
 		}
-
-		id := utils.GetID(token)
-		fmt.Println(id)
+		id, err := utils.ParseToken(token)
+		if err != nil {
+			sendJSON(w, response{Message: "Access denied", Success: false, Token: ""})
+			return
+		}
 		exists := utils.CheckID(id)
 		if !exists {
+			sendJSON(w, response{Message: "Access denied", Success: false, Token: ""})
 			return
 		}
-
-		fmt.Println("Auth middleware")
 		h.ServeHTTP(w, r)
 	})
 }
 
 func handleProtected(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("Made it to protected route")
+	sendJSON(w, response{Message: "Success", Success: true, Token: ""})
 }
 
 // handleLogin decodes JSON sent in the body,
