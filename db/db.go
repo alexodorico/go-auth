@@ -3,7 +3,6 @@ package db
 import (
 	"database/sql"
 	"fmt"
-	"log"
 	"os"
 
 	"github.com/joho/godotenv"
@@ -18,7 +17,7 @@ var Conn *sql.DB
 func init() {
 	err := godotenv.Load()
 	if err != nil {
-		log.Panic(err)
+		panic(err)
 	}
 	dbname := os.Getenv("DB_NAME")
 	dbuser := os.Getenv("DB_USER")
@@ -26,9 +25,9 @@ func init() {
 	dbinfo := fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable", dbuser, dbpassword, dbname)
 	Conn, err = sql.Open("postgres", dbinfo)
 	if err != nil {
-		log.Panic(err)
+		panic(err)
 	}
 	if err = Conn.Ping(); err != nil {
-		log.Panic(err)
+		panic(err)
 	}
 }
