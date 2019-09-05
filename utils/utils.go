@@ -1,11 +1,11 @@
 package utils
 
 import (
-	"github.com/dgrijalva/jwt-go"
 	"database/sql"
-	"github.com/alexodorico/goserver/models"
-	"golang.org/x/crypto/bcrypt"
 	"fmt"
+	"github.com/alexodorico/goserver/models"
+	"github.com/dgrijalva/jwt-go"
+	"golang.org/x/crypto/bcrypt"
 )
 
 // HashAndSalt generates a hashed password from a plain string

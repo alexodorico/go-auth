@@ -7,9 +7,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/joho/godotenv"
 	"github.com/alexodorico/goserver/models"
 	"github.com/alexodorico/goserver/utils"
+	"github.com/joho/godotenv"
 
 	_ "github.com/lib/pq"
 )
@@ -29,12 +29,11 @@ func main() {
 	err := godotenv.Load()
 	utils.CheckErr(err)
 
-	dbuser     := os.Getenv("DB_USER")
+	dbuser := os.Getenv("DB_USER")
 	dbpassword := os.Getenv("DB_PASSWORD")
-	dbname     := os.Getenv("DB_NAME")
-	
-	dbinfo := fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable",
-		dbuser, dbpassword, dbname)
+	dbname := os.Getenv("DB_NAME")
+
+	dbinfo := fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable", dbuser, dbpassword, dbname)
 	models.InitDB(dbinfo)
 
 	http.HandleFunc("/login", handleLogin)
