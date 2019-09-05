@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/alexodorico/goserver/models"
+	"github.com/alexodorico/goserver/db"
 	"github.com/dgrijalva/jwt-go"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -29,7 +29,7 @@ func ComparePasswords(hashed string, plain string) bool {
 	return true
 }
 
-// GetID parses the JWT and returns the user ID as a string
+// ParseToken returns the user ID from a JWT string
 func ParseToken(tokenString string) (string, error) {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		return []byte("secret"), nil
@@ -45,7 +45,7 @@ func ParseToken(tokenString string) (string, error) {
 // CheckDB checks for the existance of a row in the databaase
 func CheckDB(field, value string) bool {
 	query := fmt.Sprintf("SELECT id FROM users WHERE %s = $1", field)
-	err := models.DB.QueryRow(query, value).Scan()
+	err := db.Conn.QueryRow(query, value).Scan()
 	if err != sql.ErrNoRows {
 		return true
 	}

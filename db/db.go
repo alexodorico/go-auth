@@ -1,4 +1,4 @@
-package models
+package db
 
 import (
 	"database/sql"
@@ -12,30 +12,32 @@ import (
 	_ "github.com/lib/pq"
 )
 
-// DB exposes a global variable referencing the database connection
-var DB *sql.DB
+// Conn exposes a global variable referencing the database connection
+var Conn *sql.DB
 
 func init() {
 	err := godotenv.Load()
 	if err != nil {
-		fmt.Println(fmt.Errorf("%s", err))
+		panic(err)
 	}
+	dbname := os.Getenv("DB_NAME")
 	dbuser := os.Getenv("DB_USER")
 	dbpassword := os.Getenv("DB_PASSWORD")
-	dbname := os.Getenv("DB_NAME")
 	dbinfo := fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable", dbuser, dbpassword, dbname)
-	OpenDB(dbinfo)
+	Conn = OpenDB(dbinfo)
 }
 
 // OpenDB initializes the database connection
-func OpenDB(dataSourceName string) {
-	DB, err := sql.Open("postgres", dataSourceName)
+func OpenDB(dataSourceName string) *sql.DB {
+	conn, err := sql.Open("postgres", dataSourceName)
 
 	if err != nil {
 		log.Panic(err)
 	}
 
-	if err = DB.Ping(); err != nil {
+	if err = conn.Ping(); err != nil {
 		log.Panic(err)
 	}
+
+	return conn
 }

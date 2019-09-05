@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/alexodorico/goserver/models"
+	"github.com/alexodorico/goserver/db"
 	"github.com/alexodorico/goserver/utils"
 
 	_ "github.com/lib/pq"
@@ -80,7 +80,7 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = models.DB.QueryRow("SELECT id, password FROM users WHERE email = $1", u.Email).Scan(&uid, &hashpw)
+	err = db.Conn.QueryRow("SELECT id, password FROM users WHERE email = $1", u.Email).Scan(&uid, &hashpw)
 	valid := utils.ComparePasswords(hashpw, u.Password)
 	if !valid {
 		sendJSON(w, response{Message: "Incorrect email or password", Success: false, Token: ""})
@@ -109,7 +109,7 @@ func handleRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	stmt, err := models.DB.Prepare(sStmt)
+	stmt, err := db.Conn.Prepare(sStmt)
 	utils.CheckErr(err)
 	hash := utils.HashAndSalt(u.Password)
 	err = stmt.QueryRow(hash, u.Email).Scan(&userID)
