@@ -29,14 +29,16 @@ func ComparePasswords(hashed string, plain string) bool {
 }
 
 // GetID parses the JWT and returns the user ID as a string
-func GetID(tokenString string) string {
+func ParseToken(tokenString string) (string, error) {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		return []byte("secret"), nil
 	})
-	CheckErr(err)
+	if err != nil {
+		return "", fmt.Errorf("Invalid token")
+	}
 	id := token.Claims.(jwt.MapClaims)["id"]
 	str := fmt.Sprintf("%v", id)
-	return str
+	return str, nil
 }
 
 // CheckEmail tries to find if a registered email is present in the database
