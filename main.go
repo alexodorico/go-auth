@@ -2,14 +2,11 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
-	"os"
 	"strings"
 
 	"github.com/alexodorico/goserver/models"
 	"github.com/alexodorico/goserver/utils"
-	"github.com/joho/godotenv"
 
 	_ "github.com/lib/pq"
 )
@@ -26,20 +23,10 @@ type response struct {
 }
 
 func main() {
-	err := godotenv.Load()
-	utils.CheckErr(err)
-
-	dbuser := os.Getenv("DB_USER")
-	dbpassword := os.Getenv("DB_PASSWORD")
-	dbname := os.Getenv("DB_NAME")
-
-	dbinfo := fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable", dbuser, dbpassword, dbname)
-	models.InitDB(dbinfo)
-
 	http.HandleFunc("/login", handleLogin)
 	http.HandleFunc("/register", handleRegister)
 	http.HandleFunc("/protected", verifyAuth(http.HandlerFunc(handleProtected)))
-	err = http.ListenAndServe(":9000", nil)
+	err := http.ListenAndServe(":9000", nil)
 	utils.CheckErr(err)
 }
 
