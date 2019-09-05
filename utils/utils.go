@@ -41,19 +41,11 @@ func ParseToken(tokenString string) (string, error) {
 	return str, nil
 }
 
-// CheckEmail tries to find if a registered email is present in the database
-func CheckEmail(email string) bool {
-	err := models.DB.QueryRow("SELECT id FROM users WHERE email = $1", email).Scan()
+// CheckDB checks for the existance of a row in the databaase
+func CheckDB(field, value string) bool {
+	query := fmt.Sprintf("SELECT id FROM users WHERE %s = $1", field)
+	err := models.DB.QueryRow(query, value).Scan()
 	if err != sql.ErrNoRows {
-		return true
-	}
-	return false
-}
-
-// CheckID verifies a user by ID from decoded JWT
-func CheckID(id string) bool {
-	err := models.DB.QueryRow("SELECT id FROM useres WHERE id = $1", id).Scan()
-		if err != sql.ErrNoRows {
 		return true
 	}
 	return false

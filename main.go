@@ -62,7 +62,7 @@ func verifyAuth(h http.Handler) http.HandlerFunc {
 			sendJSON(w, response{Message: "Access denied", Success: false, Token: ""})
 			return
 		}
-		exists := utils.CheckID(id)
+		exists := utils.CheckDB("id", id)
 		if !exists {
 			sendJSON(w, response{Message: "Access denied", Success: false, Token: ""})
 			return
@@ -88,7 +88,7 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&u)
 	utils.CheckErr(err)
-	exists := utils.CheckEmail(u.Email)
+	exists := utils.CheckDB("email", u.Email)
 	if !exists {
 		sendJSON(w, response{Message: "Incorrect email or password", Success: false, Token: ""})
 		return
@@ -117,7 +117,7 @@ func handleRegister(w http.ResponseWriter, r *http.Request) {
 	err := decoder.Decode(&u)
 	utils.CheckErr(err)
 
-	exists := utils.CheckEmail(u.Email)
+	exists := utils.CheckDB("email", u.Email)
 	if exists {
 		sendJSON(w, response{Message: "User already exists", Success: false, Token: ""})
 		return
