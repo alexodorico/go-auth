@@ -3,6 +3,7 @@ package utils
 import (
 	"database/sql"
 	"fmt"
+
 	"github.com/alexodorico/goserver/models"
 	"github.com/dgrijalva/jwt-go"
 	"golang.org/x/crypto/bcrypt"
